@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>お弁当注文 | はやし</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
+
+  :root {
+    --cream: #FBF7F0;
+    --brown: #2E1F0F;
+    --accent: #BF5A20;
+    --accent-light: #FCEEDE;
+    --muted: #7A6050;
+    --border: #E0D0BC;
+    --white: #FFFFFF;
+    --green: #3A6B4A;
+    --green-light: #E6F0E9;
+    --red: #C0392B;
+    --red-light: #FFF0F0;
+    --pink: #F8D7DA;
+    --pink-dark: #9B3A4A;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--cream);
+    color: var(--brown);
+    font-family: 'Noto Sans JP', sans-serif;
+    min-height: 100vh;
+    padding-bottom: 80px;
+  }
+
+  header {
+    background: var(--brown);
+    color: #FBF7F0;
+    padding: 20px 20px 16px;
+    text-align: center;
+  }
+  header h1 { font-size: 1.1rem; font-weight: 900; letter-spacing: 0.1em; }
+  header p { font-size: 0.7rem; opacity: 0.55; margin-top: 3px; }
+
+  .deadline-bar {
+    padding: 9px;
+    text-align: center;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+  .deadline-bar.open   { background: var(--accent); color: white; }
+  .deadline-bar.closed { background: var(--red);    color: white; }
+
+  .container {
+    max-width: 460px;
+    margin: 0 auto;
+    padding: 18px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .card {
+    background: var(--white);
+    border-radius: 14px;
+    padding: 18px 16px;
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 6px rgba(46,31,15,0.05);
+  }
+
+  /* ===== ログイン ===== */
+  .login-title { font-size: 1rem; font-weight: 700; text-align: center; margin-bottom: 5px; }
+  .login-sub   { font-size: 0.75rem; color: var(--muted); text-align: center; margin-bottom: 18px; line-height: 1.6; }
+  .pin-label   { font-size: 0.72rem; font-weight: 700; color: var(--muted); letter-spacing: 0.1em; margin-bottom: 8px; }
+
+  .pin-wrap { display: flex; gap: 8px; justify-content: center; margin-bottom: 8px; }
+  .pin-digit {
+    width: 52px; height: 58px;
+    border: 2px solid var(--border); border-radius: 10px;
+    font-size: 1.6rem; font-weight: 900; text-align: center;
+    background: var(--cream); color: var(--brown); outline: none;
+    transition: border-color 0.18s;
+    font-family: 'Noto Sans JP', sans-serif;
+  }
+  .pin-digit:focus { border-color: var(--accent); background: white; }
+
+  .error-msg { color: var(--red); font-size: 0.78rem; text-align: center; min-height: 20px; margin-bottom: 10px; }
+
+  .login-btn {
+    width: 100%; padding: 14px;
+    background: var(--brown); color: white; border: none; border-radius: 10px;
+    font-size: 0.95rem; font-weight: 700; font-family: 'Noto Sans JP', sans-serif;
+    cursor: pointer; letter-spacing: 0.06em; transition: background 0.18s;
+  }
+  .login-btn:active { background: #1a0f06; }
+
+  /* ===== 会社バナー ===== */
+  .company-banner {
+    background: var(--brown); color: var(--cream);
+    border-radius: 12px; padding: 13px 16px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .company-icon { font-size: 1.3rem; }
+  .company-label-sm { font-size: 0.63rem; opacity: 0.6; margin-bottom: 2px; }
+  .company-name-display { font-size: 1rem; font-weight: 700; }
+
+  /* ===== 今日のメニュー ===== */
+  .menu-card { background: var(--white); border-radius: 14px; border: 1px solid var(--border); overflow: hidden; }
+  .menu-header {
+    background: var(--cream); padding: 12px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; user-select: none;
+  }
+  .menu-header-left { display: flex; align-items: center; gap: 8px; }
+  .menu-header h3 { font-size: 0.85rem; font-weight: 700; }
+  .menu-date-badge {
+    background: var(--accent); color: white;
+    font-size: 0.65rem; font-weight: 700; padding: 2px 9px;
+    border-radius: 20px; letter-spacing: 0.05em;
+  }
+  .menu-toggle { font-size: 0.75rem; color: var(--muted); transition: transform 0.2s; }
+  .menu-toggle.open { transform: rotate(180deg); }
+
+  .menu-body { padding: 0 16px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease, padding 0.3s; }
+  .menu-body.open { max-height: 400px; padding: 12px 16px; }
+
+  .menu-row {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .menu-row:last-child { border-bottom: none; }
+  .menu-type {
+    font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em;
+    padding: 2px 8px; border-radius: 20px; display: inline-flex;
+    align-self: flex-start;
+  }
+  .menu-type.original { background: var(--accent-light); color: var(--accent); }
+  .menu-type.special  { background: var(--green-light);  color: var(--green); }
+  .menu-dish { font-size: 0.88rem; font-weight: 500; line-height: 1.5; }
+  .menu-kcal { font-size: 0.7rem; color: var(--muted); }
+
+  .no-menu { font-size: 0.82rem; color: var(--muted); text-align: center; padding: 8px 0; }
+
+  /* ===== 注文フォーム ===== */
+  .section-label {
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 12px;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .section-label::before {
+    content: ''; display: block; width: 3px; height: 13px;
+    background: var(--accent); border-radius: 2px; flex-shrink: 0;
+  }
+
+  .course-group { margin-bottom: 14px; }
+  .course-group:last-of-type { margin-bottom: 0; }
+
+  .course-group-title {
+    font-size: 0.85rem; font-weight: 700;
+    border-radius: 8px; padding: 8px 12px; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .original-bg { background: var(--accent-light); color: var(--accent); }
+  .special-bg  { background: var(--green-light);  color: var(--green); }
+
+  .course-rows { display: flex; flex-direction: column; gap: 6px; }
+
+  .course-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 9px 12px; background: var(--cream); border-radius: 8px;
+    border: 1.5px solid var(--border); transition: border-color 0.18s, background 0.18s;
+  }
+  .course-row:has(.qty:focus) { border-color: var(--accent); background: white; }
+
+  .size-label { font-size: 0.9rem; font-weight: 500; flex: 1; }
+
+  .qty-wrap { display: flex; align-items: center; gap: 8px; }
+  .qty-btn {
+    width: 30px; height: 30px; border-radius: 50%;
+    border: 1.5px solid var(--border); background: white; color: var(--brown);
+    font-size: 1.1rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, border-color 0.15s; flex-shrink: 0; user-select: none;
+  }
+  .qty-btn:active { background: var(--accent-light); border-color: var(--accent); }
+
+  .qty {
+    width: 44px; text-align: center; padding: 6px 4px;
+    border: 1.5px solid var(--border); border-radius: 7px;
+    font-size: 1rem; font-weight: 700;
+    font-family: 'Noto Sans JP', sans-serif; color: var(--brown); background: white; outline: none;
+  }
+  .qty:focus { border-color: var(--accent); }
+
+  .total-bar {
+    background: var(--brown); color: var(--cream);
+    border-radius: 10px; padding: 13px 16px;
+    display: flex; align-items: center; justify-content: space-between; margin-top: 14px;
+  }
+  .total-label { font-size: 0.8rem; opacity: 0.7; }
+  .total-num { font-size: 1.5rem; font-weight: 900; }
+  .total-unit { font-size: 0.75rem; opacity: 0.7; margin-left: 2px; }
+
+  textarea {
+    width: 100%; padding: 11px 13px;
+    border: 1.5px solid var(--border); border-radius: 9px;
+    font-size: 0.93rem; font-family: 'Noto Sans JP', sans-serif;
+    color: var(--brown); background: var(--cream); outline: none;
+    resize: vertical; min-height: 68px; line-height: 1.6;
+    transition: border-color 0.18s, background 0.18s;
+  }
+  textarea:focus { border-color: var(--accent); background: white; }
+
+  .submit-btn {
+    width: 100%; padding: 16px;
+    background: var(--accent); color: white; border: none; border-radius: 12px;
+    font-size: 1rem; font-weight: 700; font-family: 'Noto Sans JP', sans-serif;
+    letter-spacing: 0.08em; cursor: pointer;
+    transition: background 0.18s, transform 0.1s;
+    box-shadow: 0 3px 10px rgba(191,90,32,0.3);
+  }
+  .submit-btn:active { background: #9E4818; transform: scale(0.99); }
+
+  .already-banner {
+    background: var(--green-light); border: 1.5px solid var(--green);
+    border-radius: 10px; padding: 10px 14px;
+    font-size: 0.8rem; color: var(--green); font-weight: 700; display: none;
+  }
+
+  .success-msg {
+    display: none; background: var(--green); color: white;
+    border-radius: 12px; padding: 20px; text-align: center;
+    font-weight: 700; font-size: 0.95rem; line-height: 1.8;
+  }
+  .success-msg.show { display: block; }
+
+  .closed-msg {
+    background: var(--red-light); border: 1.5px solid var(--red);
+    border-radius: 12px; padding: 20px; text-align: center;
+    color: var(--red); font-weight: 700; font-size: 0.9rem;
+    line-height: 1.8; display: none;
+  }
+
+  .foot-note { text-align: center; font-size: 0.7rem; color: var(--muted); }
+  .logout-btn {
+    background: none; border: none; color: var(--muted);
+    font-size: 0.72rem; text-decoration: underline; cursor: pointer;
+    text-align: center; width: 100%; font-family: 'Noto Sans JP', sans-serif;
+  }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🍱 お弁当注文 ｜ はやし</h1>
+  <p>給食弁当・仕出し</p>
+</header>
+<div class="deadline-bar open" id="deadlineBar">⏰ 受付中 ｜ 締め切り：当日 9:00 まで</div>
+
+<div class="container">
+
+  <!-- ログイン -->
+  <div id="loginScreen">
+    <div class="card">
+      <div class="login-title">🔑 暗証番号でログイン</div>
+      <div class="login-sub">お知らせした4桁の番号を入力してください</div>
+      <div class="pin-label">暗証番号</div>
+      <div class="pin-wrap">
+        <input class="pin-digit" id="p0" type="password" inputmode="numeric" maxlength="1" oninput="pinInput(0)">
+        <input class="pin-digit" id="p1" type="password" inputmode="numeric" maxlength="1" oninput="pinInput(1)">
+        <input class="pin-digit" id="p2" type="password" inputmode="numeric" maxlength="1" oninput="pinInput(2)">
+        <input class="pin-digit" id="p3" type="password" inputmode="numeric" maxlength="1" oninput="pinInput(3)">
+      </div>
+      <div class="error-msg" id="loginError"></div>
+      <button class="login-btn" onclick="doLogin()">ログイン</button>
+    </div>
+  </div>
+
+  <!-- 注文画面 -->
+  <div id="orderScreen" class="hidden">
+
+    <div class="company-banner">
+      <span class="company-icon">🏢</span>
+      <div>
+        <div class="company-label-sm">ご注文会社</div>
+        <div class="company-name-display" id="companyDisplay"></div>
+      </div>
+    </div>
+
+    <!-- 今日のメニュー -->
+    <div class="menu-card">
+      <div class="menu-header" onclick="toggleMenu()">
+        <div class="menu-header-left">
+          <h3>📋 今日のメニュー</h3>
+          <span class="menu-date-badge" id="menuDateBadge"></span>
+        </div>
+        <span class="menu-toggle" id="menuToggle">▼</span>
+      </div>
+      <div class="menu-body" id="menuBody">
+        <div id="menuContent"></div>
+      </div>
+    </div>
+
+    <div class="already-banner" id="alreadyBanner">✅ 本日すでに注文済みです。9:00 まで変更できます。</div>
+    <div class="closed-msg" id="closedMsg">🚫 本日の受付は終了しました（9:00 締め切り）<br><span style="font-size:0.8rem;font-weight:400">変更はお電話にてご連絡ください。</span></div>
+
+    <div id="formArea">
+      <div class="card">
+        <div class="section-label">数量入力</div>
+
+        <div class="course-group">
+          <div class="course-group-title original-bg">🍚 オリジナル</div>
+          <div class="course-rows">
+            <div class="course-row"><span class="size-label">大（ごはん大盛り）</span><div class="qty-wrap"><button class="qty-btn" onclick="change('o_l',-1)">−</button><input class="qty" id="o_l" type="number" value="0" min="0" oninput="updateTotal()"><button class="qty-btn" onclick="change('o_l',1)">＋</button></div></div>
+            <div class="course-row"><span class="size-label">中（ごはん普通）</span><div class="qty-wrap"><button class="qty-btn" onclick="change('o_m',-1)">−</button><input class="qty" id="o_m" type="number" value="0" min="0" oninput="updateTotal()"><button class="qty-btn" onclick="change('o_m',1)">＋</button></div></div>
+            <div class="course-row"><span class="size-label">小（ごはん少なめ）</span><div class="qty-wrap"><button class="qty-btn" onclick="change('o_s',-1)">−</button><input class="qty" id="o_s" type="number" value="0" min="0" oninput="updateTotal()"><button class="qty-btn" onclick="change('o_s',1)">＋</button></div></div>
+            <div class="course-row"><span class="size-label">おかずのみ</span><div class="qty-wrap"><button class="qty-btn" onclick="change('o_ok',-1)">−</button><input class="qty" id="o_ok" type="number" value="0" min="0" oninput="updateTotal()"><button class="qty-btn" onclick="change('o_ok',1)">＋</button></div></div>
+          </div>
+        </div>
+
+        <div class="course-group">
+          <div class="course-group-title special-bg">⭐ スペシャル</div>
+          <div class="course-rows">
+            <div class="course-row"><span class="size-label">大（ごはん大盛り）</span><div class="qty-wrap"><button class="qty-btn" onclick="change('s_l',-1)">−</button><input class="qty" id="s_l" type="number" value="0" min="0" oninput="updateTotal()"><button class="qty-btn" onclick="change('s_l',1)">＋</button></div></div>
+            <div class="course-row"><span class="size-label">中（ごはん普通）</span><div class="qty-wrap"><button class="qty-btn" onclick="change('s_m',-1)">−</button><input class="qty" id="s_m" type="number" value="0" min="0" oninput="updateTotal()"><button class="qty-btn" onclick="change('s_m',1)">＋</button></div></div>
+            <div class="course-row"><span class="size-label">小（ごはん少なめ）</span><div class="qty-wrap"><button class="qty-btn" onclick="change('s_s',-1)">−</button><input class="qty" id="s_s" type="number" value="0" min="0" oninput="updateTotal()"><button class="qty-btn" onclick="change('s_s',1)">＋</button></div></div>
+            <div class="course-row"><span class="size-label">おかずのみ</span><div class="qty-wrap"><button class="qty-btn" onclick="change('s_ok',-1)">−</button><input class="qty" id="s_ok" type="number" value="0" min="0" oninput="updateTotal()"><button class="qty-btn" onclick="change('s_ok',1)">＋</button></div></div>
+          </div>
+        </div>
+
+        <div class="total-bar">
+          <span class="total-label">合計</span>
+          <span><span class="total-num" id="total">0</span><span class="total-unit"> 個</span></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-label">備考・特記事項</div>
+        <textarea id="note" placeholder="アレルギー、数量変更の連絡など"></textarea>
+      </div>
+
+      <button class="submit-btn" id="submitBtn" onclick="submitOrder()">注文を送信する</button>
+      <div class="success-msg" id="success">
+        ✅ 注文を受け付けました！<br>
+        <span style="font-size:0.82rem;font-weight:400;opacity:0.9">9:00 まで何度でも変更できます。</span>
+      </div>
+      <p class="foot-note">9:00以降の変更はお電話にてご連絡ください。</p>
+    </div>
+
+    <button class="logout-btn" onclick="doLogout()">ログアウト</button>
+  </div>
+
+</div>
+
+<script>
+// ===== Google Apps Script URL ★デプロイ後にここを差し替える =====
+const GAS_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec';
+
+// 会社マスタ（GASから取得してここにキャッシュ）
+let COMPANIES = {};
+
+// ===== メニューマスタ =====
+// キー: "YYYY-MM-DD" で日付ごとに登録
+// 【運用ルール】
+//   ・1〜14日分 → 今月前半
+//   ・15日〜末日分 → 今月後半
+//   ・翌月分は事前にここに追加しておくだけでOK（日付が来たら自動で表示）
+const MENU = {
+
+  // ── 2026年3月 前半（1〜14日）──
+  '2026-03-02': { original: { dish: '鶏の唐揚げ・菜の花オムレツ／明太パスタ・小松菜ごま和え', kcal: '368kcal' }, special: { dish: '豚の生姜焼き・ハムマヨ玉子フライ／明太パスタ・小松菜ごま和え', kcal: '553kcal' } },
+  '2026-03-03': { original: { dish: 'スズキの竜田揚げ・豆腐ハンバーグ／筑前煮・冷奴', kcal: '317kcal' }, special: { dish: 'ハッシュドビーフ・カレーコロッケ／筑前煮・冷奴', kcal: '574kcal' } },
+  '2026-03-04': { original: { dish: '豚と茄子の味噌炒め・目玉焼きフライハーフ／南瓜の煮物・中華くらげ', kcal: '404kcal' }, special: { dish: 'メンチカツ・ベイクドエッグ／南瓜の煮物・中華くらげ', kcal: '303kcal' } },
+  '2026-03-05': { original: { dish: '肉団子の和風あん・イカ天ぷら／きんぴらごぼう・きゅうりとえのきの酢の物', kcal: '451kcal' }, special: { dish: '焼き鳥風／きんぴらごぼう・きゅうりとえのきの酢の物', kcal: '515kcal' } },
+  '2026-03-06': { original: { dish: 'ロースとんかつ／マカロニソテー・いかキャベツ中華炒め', kcal: '312kcal' }, special: { dish: 'さわらの照焼・ポークフランク／マカロニソテー・いかキャベツ中華炒め', kcal: '403kcal' } },
+  '2026-03-09': { original: { dish: 'ポークチャップ・野菜コロッケ／レンコンの煮物・ほうれん草ポン酢和え', kcal: '428kcal' }, special: { dish: 'ハンバーグ・エビフライ／レンコンの煮物・ほうれん草ポン酢和え', kcal: '382kcal' } },
+  '2026-03-10': { original: { dish: '炊き込み御飯・ぶり塩焼／焼きそば・マリネ', kcal: '420kcal' }, special: { dish: '炊き込み御飯・チキン南蛮／焼きそば・マリネ', kcal: '773kcal' } },
+  '2026-03-11': { original: { dish: 'チキンステーキスパイシー・卯の花フライ／白菜のクリーム煮・ブロッコリーのごまマヨ和え', kcal: '332kcal' }, special: { dish: '回鍋肉・イカメンチカツ／白菜のクリーム煮・ブロッコリーのごまマヨ和え', kcal: '395kcal' } },
+  '2026-03-12': { original: { dish: '豚大根・ハムサンドフライ／チリコンカン・めかぶ', kcal: '401kcal' }, special: { dish: '白身魚の甘酢あん・チキンロールフライ／チリコンカン・めかぶ', kcal: '340kcal' } },
+  '2026-03-13': { original: { dish: 'あじフライ・野菜とひじきの豆腐焼／生姜天の煮物・もやしの梅おかか和え', kcal: '329kcal' }, special: { dish: '肉じゃが・白身フライ／生姜天の煮物・もやしの梅おかか和え', kcal: '458kcal' } },
+
+  // ── 2026年3月 後半（15日〜）── ★メニュー表が届いたらここに追加
+  // '2026-03-16': { original: { dish: '（メニュー名）', kcal: '000kcal' }, special: { dish: '（メニュー名）', kcal: '000kcal' } },
+  // '2026-03-17': { original: { dish: '（メニュー名）', kcal: '000kcal' }, special: { dish: '（メニュー名）', kcal: '000kcal' } },
+
+  // ── 2026年4月 前半（事前入力用）── ★3月中に追加しておける
+  // '2026-04-01': { original: { dish: '（メニュー名）', kcal: '000kcal' }, special: { dish: '（メニュー名）', kcal: '000kcal' } },
+  // '2026-04-02': { original: { dish: '（メニュー名）', kcal: '000kcal' }, special: { dish: '（メニュー名）', kcal: '000kcal' } },
+
+};
+
+const CUTOFF_HOUR = 9;
+const ids = ['o_l','o_m','o_s','o_ok','s_l','s_m','s_s','s_ok'];
+let currentCompany = '';
+let menuOpen = false;
+
+function todayKey() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
+function isPastDeadline() {
+  return false; // ★テスト中は常にfalse（本番時は下の行に戻す）
+  // return new Date().getHours() >= CUTOFF_HOUR;
+}
+
+function jpDayLabel() {
+  const days = ['日','月','火','水','木','金','土'];
+  const d = new Date();
+  return `${d.getMonth()+1}月${d.getDate()}日（${days[d.getDay()]}）`;
+}
+
+// PINオートフォーカス
+function pinInput(idx) {
+  const val = document.getElementById('p' + idx).value;
+  if (val.length === 1 && idx < 3) document.getElementById('p' + (idx+1)).focus();
+  if (val.length === 1 && idx === 3) doLogin();
+}
+
+function getPin() {
+  return [0,1,2,3].map(i => document.getElementById('p'+i).value).join('');
+}
+
+async function doLogin() {
+  const pin = getPin();
+
+  // まずキャッシュを確認、なければGASから取得
+  if (Object.keys(COMPANIES).length === 0) {
+    document.getElementById('loginError').textContent = '認証中...';
+    try {
+      const res = await fetch(`${GAS_URL}?action=getMaster`);
+      COMPANIES = await res.json();
+    } catch(e) {
+      // GAS未設定の場合はテスト用データで動作
+      COMPANIES = { '1001': 'A株式会社', '2002': 'B株式会社', '3003': 'C株式会社' };
+    }
+    document.getElementById('loginError').textContent = '';
+  }
+
+  const name = COMPANIES[pin];
+  if (!name) {
+    document.getElementById('loginError').textContent = '暗証番号が違います。もう一度確認してください。';
+    [0,1,2,3].forEach(i => { document.getElementById('p'+i).value = ''; });
+    document.getElementById('p0').focus();
+    return;
+  }
+  currentCompany = name;
+  showOrderScreen();
+}
+
+function showOrderScreen() {
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('orderScreen').classList.remove('hidden');
+  document.getElementById('companyDisplay').textContent = currentCompany;
+
+  // メニュー表示
+  document.getElementById('menuDateBadge').textContent = jpDayLabel();
+  renderMenu();
+
+  if (isPastDeadline()) {
+    document.getElementById('deadlineBar').className = 'deadline-bar closed';
+    document.getElementById('deadlineBar').textContent = '🚫 本日の受付は終了しました（9:00 締め切り）';
+    document.getElementById('formArea').classList.add('hidden');
+    document.getElementById('closedMsg').style.display = 'block';
+  }
+}
+
+function renderMenu() {
+  const key = todayKey();
+  const menu = MENU[key];
+  const el = document.getElementById('menuContent');
+
+  if (!menu) {
+    el.innerHTML = '<div class="no-menu">本日のメニュー情報はありません。</div>';
+    return;
+  }
+
+  el.innerHTML = `
+    <div class="menu-row">
+      <span class="menu-type original">オリジナル</span>
+      <div class="menu-dish">${menu.original.dish}</div>
+      <div class="menu-kcal">${menu.original.kcal}</div>
+    </div>
+    <div class="menu-row">
+      <span class="menu-type special">スペシャル</span>
+      <div class="menu-dish">${menu.special.dish}</div>
+      <div class="menu-kcal">${menu.special.kcal}</div>
+    </div>
+  `;
+}
+
+function toggleMenu() {
+  menuOpen = !menuOpen;
+  document.getElementById('menuBody').classList.toggle('open', menuOpen);
+  document.getElementById('menuToggle').classList.toggle('open', menuOpen);
+}
+
+function doLogout() {
+  currentCompany = '';
+  document.getElementById('orderScreen').classList.add('hidden');
+  document.getElementById('loginScreen').classList.remove('hidden');
+  [0,1,2,3].forEach(i => { document.getElementById('p'+i).value = ''; });
+  document.getElementById('loginError').textContent = '';
+  document.getElementById('p0').focus();
+}
+
+function change(id, delta) {
+  const el = document.getElementById(id);
+  el.value = Math.max(0, (parseInt(el.value)||0) + delta);
+  updateTotal();
+}
+
+function updateTotal() {
+  const sum = ids.reduce((acc,id) => acc + (parseInt(document.getElementById(id).value)||0), 0);
+  document.getElementById('total').textContent = sum;
+}
+
+async function submitOrder() {
+  if (isPastDeadline()) { alert('受付時間を過ぎています'); return; }
+  const total = ids.reduce((acc,id) => acc + (parseInt(document.getElementById(id).value)||0), 0);
+  if (total === 0) { alert('数量を1つ以上入力してください'); return; }
+
+  const btn = document.getElementById('submitBtn');
+  btn.textContent = '送信中...';
+  btn.disabled = true;
+
+  const payload = {
+    date:    todayKey(),
+    company: currentCompany,
+    o_large: parseInt(document.getElementById('o_l').value)||0,
+    o_mid:   parseInt(document.getElementById('o_m').value)||0,
+    o_small: parseInt(document.getElementById('o_s').value)||0,
+    o_okazu: parseInt(document.getElementById('o_ok').value)||0,
+    s_large: parseInt(document.getElementById('s_l').value)||0,
+    s_mid:   parseInt(document.getElementById('s_m').value)||0,
+    s_small: parseInt(document.getElementById('s_s').value)||0,
+    s_okazu: parseInt(document.getElementById('s_ok').value)||0,
+    note:    document.getElementById('note').value,
+  };
+
+  try {
+    await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  } catch(e) {
+    console.log('送信データ（テスト）:', payload);
+  }
+
+  btn.style.display = 'none';
+  document.getElementById('success').classList.add('show');
+  document.getElementById('alreadyBanner').style.display = 'block';
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (isPastDeadline()) {
+    document.getElementById('deadlineBar').className = 'deadline-bar closed';
+    document.getElementById('deadlineBar').textContent = '🚫 本日の受付は終了しました（9:00 締め切り）';
+  }
+  document.getElementById('p0').focus();
+});
+</script>
+</body>
+</html>
