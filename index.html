@@ -357,7 +357,7 @@
 
 <script>
 // ===== Google Apps Script URL ★デプロイ後にここを差し替える =====
-const GAS_URL = 'https://script.google.com/macros/s/AKfycby50eOm5ZXtriq9Y8AsRuMZtiHHuj9PjKmjzBkky7MZfJRyXTGp24pvGJ6xbI2bHnuY/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyYgSWaibrIxGvMIppdWn3Ua0zNDWC6AuYkP0RgZjdvvkR22TA9xO48SAgSpDoDA2fN/exec';
 
 // 会社マスタ（GASから取得してここにキャッシュ）
 let COMPANIES = {};
@@ -544,24 +544,13 @@ async function submitOrder() {
     note:    document.getElementById('note').value,
   };
 
- try {
-    // ↓ここをこのように書き換えます
+  try {
     await fetch(GAS_URL, {
       method: 'POST',
-      mode: 'no-cors', // これを追加
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    
-    // 送信成功時の処理
-    btn.style.display = 'none';
-    document.getElementById('success').classList.add('show');
-    document.getElementById('alreadyBanner').style.display = 'block';
-
   } catch(e) {
-    alert('エラーが発生しました。ネット接続を確認してください。');
-    btn.disabled = false;
-    btn.textContent = '注文を送信する';
+    console.log('送信データ（テスト）:', payload);
   }
 
   btn.style.display = 'none';
