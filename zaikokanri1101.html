@@ -12,6 +12,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
 .h-left h1{font-size:22px;font-weight:700}
 .h-left p{font-size:12px;color:#888;margin-top:2px}
 .sync-btn{padding:9px 14px;font-size:15px;border:1px solid #ccc;border-radius:8px;background:#fff;cursor:pointer}
+.name-bar{background:#fff;border-radius:14px;padding:12px 16px;margin-bottom:14px;border:1px solid #e0e0e0;display:flex;align-items:center;gap:10px}
+.name-bar label{font-size:15px;color:#888;white-space:nowrap}
+.name-bar input{flex:1;padding:10px;font-size:17px;border:1px solid #ccc;border-radius:8px}
 .tabs{display:flex;gap:6px;margin-bottom:14px}
 .tab{flex:1;padding:10px 2px;border:1px solid #ccc;border-radius:8px;background:#fff;font-size:13px;color:#888;cursor:pointer;text-align:center;line-height:1.5}
 .tab.active{background:#e8f0fe;border-color:#4a90e2;color:#1a56b0;font-weight:700}
@@ -28,7 +31,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
 .b-ok{background:#e6f4ea;color:#1e7e34}
 .b-low{background:#fff8e1;color:#b45309}
 .b-out{background:#fdecea;color:#b91c1c}
-.memo-box{background:#fffde7;border:1px solid #ffe082;border-radius:8px;padding:8px 12px;font-size:14px;color:#555;margin-bottom:10px;min-height:32px;white-space:pre-wrap;word-break:break-all}
+.memo-box{background:#fffde7;border:1px solid #ffe082;border-radius:8px;padding:8px 12px;font-size:14px;color:#555;margin-bottom:10px;white-space:pre-wrap;word-break:break-all}
 .memo-empty{color:#bbb;font-style:italic}
 .io-row{display:flex;gap:8px;align-items:center;padding:10px 0}
 .io-row:first-of-type{border-top:1px solid #eee}
@@ -57,8 +60,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
 .sname{font-size:18px}
 .sunit{font-size:12px;color:#888}
 .sval{font-size:26px;font-weight:700}
-.sin{font-size:13px;color:#1e7e34}
-.sout{font-size:13px;color:#b91c1c}
+.hist-card{background:#fff;border:1px solid #e0e0e0;border-radius:14px;padding:16px;margin-bottom:12px}
+.hist-title{font-size:17px;font-weight:700;margin-bottom:12px}
+.hist-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #eee;font-size:14px}
+.hist-row:last-child{border-bottom:none}
+.hist-left{color:#555}
+.hist-left b{font-size:16px;color:#222}
+.hist-in{color:#1e7e34;font-weight:700;font-size:16px}
+.hist-out{color:#b91c1c;font-weight:700;font-size:16px}
+.hist-op{font-size:13px;color:#888}
 .add-card{background:#fff;border:1px solid #e0e0e0;border-radius:14px;padding:16px;margin-bottom:12px}
 .add-card label{font-size:15px;color:#888;display:block;margin-bottom:5px}
 .add-card input,.add-card textarea{width:100%;padding:12px;font-size:17px;border:1px solid #ccc;border-radius:8px;margin-bottom:12px;font-family:inherit}
@@ -66,6 +76,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
 .btn-full{width:100%;padding:15px;background:#e8f0fe;color:#1a56b0;border:1px solid #4a90e2;border-radius:8px;font-size:19px;cursor:pointer;font-weight:700}
 .loading{text-align:center;padding:40px;font-size:17px;color:#888}
 .err{background:#fdecea;color:#b91c1c;border:1px solid #f5a0a0;border-radius:8px;padding:14px;font-size:16px;margin-bottom:12px}
+.no-name{border-color:red!important}
 </style>
 </head>
 <body>
@@ -77,10 +88,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
     </div>
     <button class="sync-btn" onclick="loadItems()">🔄 更新</button>
   </div>
+
+  <div class="name-bar">
+    <label>👤 名前</label>
+    <input type="text" id="operator" placeholder="あなたの名前を入力" value="">
+  </div>
+
   <div class="tabs">
     <div class="tab active" onclick="sw('stock')">📦<br>在庫</div>
     <div class="tab" onclick="sw('summary')">📊<br>集計</div>
-    <div class="tab" onclick="sw('add')">➕<br>品目追加</div>
+    <div class="tab" onclick="sw('history')">📋<br>履歴</div>
+    <div class="tab" onclick="sw('add')">➕<br>追加</div>
   </div>
 
   <div id="overlay" class="overlay" onclick="bgClose(event)">
@@ -102,13 +120,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
 
   <div id="sec-stock" class="sec active"><div class="loading">読み込み中...</div></div>
   <div id="sec-summary" class="sec"></div>
+  <div id="sec-history" class="sec"></div>
   <div id="sec-add" class="sec">
     <div class="add-card">
       <label>品目名</label><input type="text" id="n-name" placeholder="例：醤油"/>
       <label>容量・単位（例：1L、500ml）</label><input type="text" id="n-unit" placeholder="例：1L"/>
       <label>現在の在庫数</label><input type="number" id="n-qty" placeholder="0" min="0"/>
       <label>下限アラート数</label><input type="number" id="n-min" placeholder="2" min="0"/>
-      <label>📝 メモ（仕入れ先・注意事項など）</label>
+      <label>📝 メモ</label>
       <textarea id="n-memo" placeholder="自由に記入できます"></textarea>
       <button class="btn-full" onclick="addItem()">➕ 追加する</button>
     </div>
@@ -117,8 +136,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
 
 <script>
 const GAS='https://script.google.com/macros/s/AKfycbwKAKQIjdUW18oly8DWJwWgpEE0UU2_CgdisEKmNGnVmjzsXeGhnh-yTCgdabvvaaxE/exec';
-let items=[];
+let items=[],history=[];
 
+function getOperator(){
+  const v=document.getElementById('operator').value.trim();
+  if(!v){document.getElementById('operator').classList.add('no-name');setTimeout(()=>document.getElementById('operator').classList.remove('no-name'),1000);}
+  return v;
+}
 async function gasGet(){
   const r=await fetch(GAS+'?t='+Date.now());
   return r.json();
@@ -135,7 +159,7 @@ function status(item){
 }
 function renderStock(){
   const el=document.getElementById('sec-stock');
-  if(!items.length){el.innerHTML='<div class="loading">品目がありません<br>「品目追加」から追加してください</div>';return;}
+  if(!items.length){el.innerHTML='<div class="loading">品目がありません</div>';return;}
   el.innerHTML=items.map(item=>{
     const[cls,lbl]=status(item);
     const memo=item.memo?`<div class="memo-box">${item.memo}</div>`:`<div class="memo-box memo-empty">メモなし</div>`;
@@ -180,22 +204,38 @@ function renderSummary(){
   }).join('');
   el.innerHTML=`<div class="sum-card"><p class="sum-title">📅 ${title}</p>${rows||'<p style="color:#888">データがありません</p>'}</div>`;
 }
+function renderHistory(){
+  const el=document.getElementById('sec-history');
+  if(!history.length){el.innerHTML='<div class="loading">履歴がありません</div>';return;}
+  const rows=[...history].reverse().slice(0,50).map(h=>{
+    const isIn=h.action==='入庫';
+    return`<div class="hist-row">
+      <div class="hist-left">
+        <b>${h.name||h.item}</b><br>
+        <span class="hist-op">👤 ${h.operator||'不明'} ／ ${h.date}</span>
+      </div>
+      <span class="${isIn?'hist-in':'hist-out'}">${isIn?'＋':'－'}${h.qty}</span>
+    </div>`;
+  }).join('');
+  el.innerHTML=`<div class="hist-card"><p class="hist-title">📋 操作履歴（直近50件）</p>${rows}</div>`;
+}
 async function loadItems(){
   document.getElementById('sec-stock').innerHTML='<div class="loading">読み込み中...</div>';
   try{
     const data=await gasGet();
-    items=data.filter(d=>d.id&&d.name);
+    items=(data.items||[]).filter(d=>d.id&&d.name);
+    history=data.history||[];
     const now=new Date();
     document.getElementById('sync-time').textContent=
       (now.getMonth()+1)+'月'+now.getDate()+'日 '+
       now.getHours()+':'+now.getMinutes().toString().padStart(2,'0')+' 同期';
-    renderStock();renderSummary();
+    renderStock();renderSummary();renderHistory();
   }catch(e){
-    document.getElementById('sec-stock').innerHTML='<div class="err">読み込みエラー。更新ボタンを押してください。</div>';
-    document.getElementById('sync-time').textContent='エラー';
+    document.getElementById('sec-stock').innerHTML='<div class="err">読み込みエラー。更新を押してください。</div>';
   }
 }
 async function doIn(id){
+  const op=getOperator();if(!op)return;
   const inp=document.getElementById('in-'+id);
   const btn=document.getElementById('bin-'+id);
   const qty=parseInt(inp.value)||0;
@@ -203,10 +243,11 @@ async function doIn(id){
   const item=items.find(i=>String(i.id)===String(id));
   if(!item)return;
   btn.disabled=true;btn.textContent='保存中...';
-  await gasPost({action:'update',id,qty:Number(item.qty)+qty});
+  await gasPost({action:'update_in',id,qty:Number(item.qty)+qty,diff:qty,item_name:item.name,operator:op});
   inp.value=1;await loadItems();
 }
 async function doOut(id){
+  const op=getOperator();if(!op)return;
   const inp=document.getElementById('out-'+id);
   const btn=document.getElementById('bout-'+id);
   const qty=parseInt(inp.value)||0;
@@ -214,9 +255,9 @@ async function doOut(id){
   const item=items.find(i=>String(i.id)===String(id));
   if(!item)return;
   const newQty=Number(item.qty)-qty;
-  if(newQty<0){alert('在庫数が足りません！現在の在庫：'+Math.round(Number(item.qty))+'本');return;}
+  if(newQty<0){alert('在庫が足りません！現在：'+Math.round(Number(item.qty))+'本');return;}
   btn.disabled=true;btn.textContent='保存中...';
-  await gasPost({action:'update',id,qty:newQty});
+  await gasPost({action:'update_out',id,qty:newQty,diff:qty,item_name:item.name,operator:op});
   inp.value=1;await loadItems();
 }
 function openEdit(id){
@@ -267,10 +308,15 @@ async function addItem(){
   sw('stock');await loadItems();
 }
 function sw(tab){
-  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['stock','summary','add'][i]===tab));
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['stock','summary','history','add'][i]===tab));
   document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));
   document.getElementById('sec-'+tab).classList.add('active');
 }
+const saved=localStorage.getItem('bihin_operator');
+if(saved)document.getElementById('operator').value=saved;
+document.getElementById('operator').addEventListener('change',()=>{
+  localStorage.setItem('bihin_operator',document.getElementById('operator').value);
+});
 loadItems();
 </script>
 </body>
