@@ -244,3 +244,176 @@ function doPrint(){
 
   const stockRows=items.map(item=>{
     const[cls,lbl]=status(item);
+    return`<tr>
+      <td>${item.name}</td>
+      <td>${item.unit}</td>
+      <td style="text-align:center;font-weight:700">${Math.round(Number(item.qty))}</td>
+      <td style="text-align:center">${Math.round(Number(item.min_qty))}</td>
+      <td style="text-align:center">${lbl}</td>
+      <td>${item.memo||''}</td>
+    </tr>`;
+  }).join('');
+
+  const monthHist=history.filter(h=>{
+    if(!h.date)return false;
+    const hd=new Date(h.date);
+    return hd.getFullYear()+'-'+String(hd.getMonth()+1).padStart(2,'0')===thisMonth;
+  });
+
+  const inMap={},outMap={};
+  monthHist.forEach(h=>{
+    const n=h.name||h.item||'';
+    const q=Number(h.qty)||0;
+    if(h.action==='入庫'){inMap[n]=(inMap[n]||0)+q;}
+    else{outMap[n]=(outMap[n]||0)+q;}
+  });
+
+  const summaryRows=items.map(item=>{
+    return`<tr>
+      <td>${item.name}</td>
+      <td style="text-align:center;color:#1e7e34;font-weight:700">+${inMap[item.name]||0}</td>
+      <td style="text-align:center;color:#b91c1c;font-weight:700">-${outMap[item.name]||0}</td>
+      <td style="text-align:center;font-weight:700">${Math.round(Number(item.qty))}</td>
+    </tr>`;
+  }).join('');
+
+  const histRows=[...monthHist].reverse().map(h=>{
+    const isIn=h.action==='入庫';
+    return`<tr>
+      <td>${h.date||''}</td>
+      <td>${h.name||h.item||''}</td>
+      <td style="text-align:center;color:${isIn?'#1e7e34':'#b91c1c'};font-weight:700">${isIn?'入庫':'出庫'}</td>
+      <td style="text-align:center;font-weight:700">${h.qty}</td>
+      <td>${h.operator||'不明'}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('print-area').innerHTML=`
+    <div class="print-header">
+      <h2>備品在庫管理 月次レポート</h2>
+      <p>${ym} ／ 出力日：${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日</p>
+    </div>
+    <div class="print-section-title">現在の在庫状況</div>
+    <table class="print-table">
+      <thead><tr><th>品目名</th><th>容量・単位</th><th>在庫数</th><th>下限</th><th>状態</th><th>メモ</th></tr></thead>
+      <tbody>${stockRows}</tbody>
+    </table>
+    <div class="print-section-title">${ym} 入出庫サマリー</div>
+    <table class="print-table">
+      <thead><tr><th>品目名</th><th>入庫合計</th><th>出庫合計</th><th>現在庫</th></tr></thead>
+      <tbody>${summaryRows}</tbody>
+    </table>
+    <div class="print-section-title">${ym} 操作履歴</div>
+    <table class="print-table">
+      <thead><tr><th>日時</th><th>品目名</th><th>種別</th><th>数量</th><th>担当者</th></tr></thead>
+      <tbody>${histRows||'<tr><td colspan="5" style="text-align:center;color:#888">記録なし</td></tr>'}</tbody>
+    </table>`;
+  window.print();
+}
+async function loadItems(){
+  document.getElementById('sec-stock').innerHTML='<div class="loading">読み込み中...</div>';
+  try{
+    const data=await gasGet();
+    if(Array.isArray(data)){
+      items=data.filter(d=>d.id&&d.name);
+      history=[];
+    }else{
+      items=(data.items||[]).filter(d=>d.id&&d.name);
+      history=data.history||[];
+    }
+    const now=new Date();
+    document.getElementById('sync-time').textContent=
+      (now.getMonth()+1)+'月'+now.getDate()+'日 '+
+      now.getHours()+':'+now.getMinutes().toString().padStart(2,'0')+' 同期';
+    renderStock();renderSummary();renderHistory();
+  }catch(e){
+    document.getElementById('sec-stock').innerHTML='<div class="err">読み込みエラー。更新を押してください。</div>';
+  }
+}
+async function doIn(id){
+  const op=getOperator();if(!op)return;
+  const inp=document.getElementById('in-'+id);
+  const btn=document.getElementById('bin-'+id);
+  const qty=parseInt(inp.value)||0;
+  if(qty<=0){inp.style.borderColor='red';setTimeout(()=>inp.style.borderColor='',1000);return;}
+  const item=items.find(i=>String(i.id)===String(id));
+  if(!item)return;
+  btn.disabled=true;btn.textContent='保存中...';
+  await gasPost({action:'update_in',id,qty:Number(item.qty)+qty,diff:qty,item_name:item.name,operator:op});
+  inp.value=1;await loadItems();
+}
+async function doOut(id){
+  const op=getOperator();if(!op)return;
+  const inp=document.getElementById('out-'+id);
+  const btn=document.getElementById('bout-'+id);
+  const qty=parseInt(inp.value)||0;
+  if(qty<=0){inp.style.borderColor='red';setTimeout(()=>inp.style.borderColor='',1000);return;}
+  const item=items.find(i=>String(i.id)===String(id));
+  if(!item)return;
+  const newQty=Number(item.qty)-qty;
+  if(newQty<0){alert('在庫が足りません！現在：'+Math.round(Number(item.qty))+'本');return;}
+  btn.disabled=true;btn.textContent='保存中...';
+  await gasPost({action:'update_out',id,qty:newQty,diff:qty,item_name:item.name,operator:op});
+  inp.value=1;await loadItems();
+}
+function openEdit(id){
+  const item=items.find(i=>String(i.id)===String(id));
+  if(!item)return;
+  document.getElementById('e-id').value=id;
+  document.getElementById('e-name').value=item.name;
+  document.getElementById('e-unit').value=item.unit;
+  document.getElementById('e-qty').value=Math.round(Number(item.qty));
+  document.getElementById('e-min').value=Math.round(Number(item.min_qty));
+  document.getElementById('e-memo').value=item.memo||'';
+  document.getElementById('overlay').classList.add('open');
+}
+function bgClose(e){if(e.target===document.getElementById('overlay'))closeModal();}
+function closeModal(){document.getElementById('overlay').classList.remove('open');}
+async function saveEdit(){
+  const id=document.getElementById('e-id').value;
+  const name=document.getElementById('e-name').value.trim();
+  const unit=document.getElementById('e-unit').value.trim();
+  const qty=parseInt(document.getElementById('e-qty').value)||0;
+  const min_qty=parseInt(document.getElementById('e-min').value)||0;
+  const memo=document.getElementById('e-memo').value.trim();
+  if(!name)return;
+  await gasPost({action:'edit',id,name,unit,qty,min_qty,memo});
+  closeModal();await loadItems();
+}
+async function doDelete(){
+  const id=document.getElementById('e-id').value;
+  const item=items.find(i=>String(i.id)===String(id));
+  if(!confirm((item?item.name:'品目')+'を削除しますか？'))return;
+  await gasPost({action:'delete',id});
+  closeModal();await loadItems();
+}
+async function addItem(){
+  const name=document.getElementById('n-name').value.trim();
+  const unit=document.getElementById('n-unit').value.trim()||'本';
+  const qty=parseInt(document.getElementById('n-qty').value)||0;
+  const min_qty=parseInt(document.getElementById('n-min').value)||1;
+  const memo=document.getElementById('n-memo').value.trim();
+  if(!name)return;
+  const id='i'+Date.now();
+  await gasPost({action:'add',id,name,unit,qty,min_qty,memo});
+  document.getElementById('n-name').value='';
+  document.getElementById('n-unit').value='';
+  document.getElementById('n-qty').value='';
+  document.getElementById('n-min').value='';
+  document.getElementById('n-memo').value='';
+  sw('stock');await loadItems();
+}
+function sw(tab){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['stock','summary','history','add'][i]===tab));
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));
+  document.getElementById('sec-'+tab).classList.add('active');
+}
+const saved=localStorage.getItem('bihin_operator');
+if(saved)document.getElementById('operator').value=saved;
+document.getElementById('operator').addEventListener('change',()=>{
+  localStorage.setItem('bihin_operator',document.getElementById('operator').value);
+});
+loadItems();
+</script>
+</body>
+</html>
