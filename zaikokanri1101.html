@@ -88,12 +88,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
     </div>
     <button class="sync-btn" onclick="loadItems()">🔄 更新</button>
   </div>
-
   <div class="name-bar">
     <label>👤 名前</label>
-    <input type="text" id="operator" placeholder="あなたの名前を入力" value="">
+    <input type="text" id="operator" placeholder="あなたの名前を入力"/>
   </div>
-
   <div class="tabs">
     <div class="tab active" onclick="sw('stock')">📦<br>在庫</div>
     <div class="tab" onclick="sw('summary')">📊<br>集計</div>
@@ -211,8 +209,8 @@ function renderHistory(){
     const isIn=h.action==='入庫';
     return`<div class="hist-row">
       <div class="hist-left">
-        <b>${h.name||h.item}</b><br>
-        <span class="hist-op">👤 ${h.operator||'不明'} ／ ${h.date}</span>
+        <b>${h.name||h.item||''}</b><br>
+        <span class="hist-op">👤 ${h.operator||'不明'} ／ ${h.date||''}</span>
       </div>
       <span class="${isIn?'hist-in':'hist-out'}">${isIn?'＋':'－'}${h.qty}</span>
     </div>`;
@@ -223,8 +221,13 @@ async function loadItems(){
   document.getElementById('sec-stock').innerHTML='<div class="loading">読み込み中...</div>';
   try{
     const data=await gasGet();
-    items=(data.items||[]).filter(d=>d.id&&d.name);
-    history=data.history||[];
+    if(Array.isArray(data)){
+      items=data.filter(d=>d.id&&d.name);
+      history=[];
+    } else {
+      items=(data.items||[]).filter(d=>d.id&&d.name);
+      history=data.history||[];
+    }
     const now=new Date();
     document.getElementById('sync-time').textContent=
       (now.getMonth()+1)+'月'+now.getDate()+'日 '+
