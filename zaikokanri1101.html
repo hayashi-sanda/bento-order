@@ -74,37 +74,53 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
 .add-card input,.add-card textarea{width:100%;padding:12px;font-size:17px;border:1px solid #ccc;border-radius:8px;margin-bottom:12px;font-family:inherit}
 .add-card textarea{height:70px;resize:vertical;font-size:15px}
 .btn-full{width:100%;padding:15px;background:#e8f0fe;color:#1a56b0;border:1px solid #4a90e2;border-radius:8px;font-size:19px;cursor:pointer;font-weight:700}
+.btn-print{width:100%;padding:15px;background:#e6f4ea;color:#1e7e34;border:1px solid #a7d7b0;border-radius:8px;font-size:19px;cursor:pointer;font-weight:700;margin-bottom:12px}
 .loading{text-align:center;padding:40px;font-size:17px;color:#888}
 .err{background:#fdecea;color:#b91c1c;border:1px solid #f5a0a0;border-radius:8px;padding:14px;font-size:16px;margin-bottom:12px}
 .no-name{border-color:red!important}
+@media print{
+  body{background:#fff}
+  .no-print{display:none!important}
+  .print-area{display:block!important}
+  .app{max-width:100%;padding:0}
+}
+.print-area{display:none}
+.print-header{text-align:center;margin-bottom:20px;padding-bottom:10px;border-bottom:2px solid #333}
+.print-header h2{font-size:22px;font-weight:700}
+.print-header p{font-size:13px;color:#666;margin-top:4px}
+.print-table{width:100%;border-collapse:collapse;margin-bottom:20px;font-size:14px}
+.print-table th{background:#f0f0f0;padding:8px 10px;text-align:left;border:1px solid #ccc;font-weight:700}
+.print-table td{padding:8px 10px;border:1px solid #ccc}
+.print-table tr:nth-child(even){background:#fafafa}
+.print-section-title{font-size:16px;font-weight:700;margin:16px 0 8px;padding-left:8px;border-left:4px solid #4a90e2}
 </style>
 </head>
 <body>
 <div class="app">
-  <div class="header">
+  <div class="header no-print">
     <div class="h-left">
       <h1>📦 備品管理</h1>
       <p id="sync-time">読み込み中...</p>
     </div>
     <button class="sync-btn" onclick="loadItems()">🔄 更新</button>
   </div>
-  <div class="name-bar">
+  <div class="name-bar no-print">
     <label>👤 名前</label>
     <input type="text" id="operator" placeholder="あなたの名前を入力"/>
   </div>
-  <div class="tabs">
+  <div class="tabs no-print">
     <div class="tab active" onclick="sw('stock')">📦<br>在庫</div>
     <div class="tab" onclick="sw('summary')">📊<br>集計</div>
     <div class="tab" onclick="sw('history')">📋<br>履歴</div>
     <div class="tab" onclick="sw('add')">➕<br>追加</div>
   </div>
 
-  <div id="overlay" class="overlay" onclick="bgClose(event)">
+  <div id="overlay" class="overlay no-print" onclick="bgClose(event)">
     <div class="modal" onclick="event.stopPropagation()">
       <div class="modal-title">✏️ 品目を編集</div>
       <input type="hidden" id="e-id"/>
       <div class="frow"><label>品目名</label><input type="text" id="e-name"/></div>
-      <div class="frow"><label>容量・単位（例：1L、500ml）</label><input type="text" id="e-unit"/></div>
+      <div class="frow"><label>容量・単位</label><input type="text" id="e-unit"/></div>
       <div class="frow"><label>現在の在庫数</label><input type="number" id="e-qty" min="0"/></div>
       <div class="frow"><label>下限アラート数</label><input type="number" id="e-min" min="0"/></div>
       <div class="frow"><label>📝 メモ</label><textarea id="e-memo" placeholder="仕入れ先・注意事項など"></textarea></div>
@@ -116,10 +132,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
     </div>
   </div>
 
-  <div id="sec-stock" class="sec active"><div class="loading">読み込み中...</div></div>
-  <div id="sec-summary" class="sec"></div>
-  <div id="sec-history" class="sec"></div>
-  <div id="sec-add" class="sec">
+  <div id="sec-stock" class="sec active no-print"><div class="loading">読み込み中...</div></div>
+  <div id="sec-summary" class="sec no-print"></div>
+  <div id="sec-history" class="sec no-print"></div>
+  <div id="sec-add" class="sec no-print">
     <div class="add-card">
       <label>品目名</label><input type="text" id="n-name" placeholder="例：醤油"/>
       <label>容量・単位（例：1L、500ml）</label><input type="text" id="n-unit" placeholder="例：1L"/>
@@ -130,10 +146,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;bac
       <button class="btn-full" onclick="addItem()">➕ 追加する</button>
     </div>
   </div>
+
+  <div id="print-area" class="print-area"></div>
 </div>
 
 <script>
-const GAS='https://script.google.com/macros/s/AKfycbwKAKQIjdUW18oly8DWJwWgpEE0UU2_CgdisEKmNGnVmjzsXeGhnh-yTCgdabvvaaxE/exec';
+const GAS='https://script.google.com/macros/s/AKfycby3-wqhyOkib3X62CScAMHK5LIqTU1pAtaaW1eDbEvfw3I8s1UqXnULB8wd3Q4ivxrv/exec';
 let items=[],history=[];
 
 function getOperator(){
@@ -200,7 +218,9 @@ function renderSummary(){
       </div>
     </div>`;
   }).join('');
-  el.innerHTML=`<div class="sum-card"><p class="sum-title">📅 ${title}</p>${rows||'<p style="color:#888">データがありません</p>'}</div>`;
+  el.innerHTML=`
+    <button class="btn-print" onclick="doPrint()">🖨️ 月次レポートを印刷</button>
+    <div class="sum-card"><p class="sum-title">📅 ${title}</p>${rows||'<p style="color:#888">データがありません</p>'}</div>`;
 }
 function renderHistory(){
   const el=document.getElementById('sec-history');
@@ -217,110 +237,10 @@ function renderHistory(){
   }).join('');
   el.innerHTML=`<div class="hist-card"><p class="hist-title">📋 操作履歴（直近50件）</p>${rows}</div>`;
 }
-async function loadItems(){
-  document.getElementById('sec-stock').innerHTML='<div class="loading">読み込み中...</div>';
-  try{
-    const data=await gasGet();
-    if(Array.isArray(data)){
-      items=data.filter(d=>d.id&&d.name);
-      history=[];
-    } else {
-      items=(data.items||[]).filter(d=>d.id&&d.name);
-      history=data.history||[];
-    }
-    const now=new Date();
-    document.getElementById('sync-time').textContent=
-      (now.getMonth()+1)+'月'+now.getDate()+'日 '+
-      now.getHours()+':'+now.getMinutes().toString().padStart(2,'0')+' 同期';
-    renderStock();renderSummary();renderHistory();
-  }catch(e){
-    document.getElementById('sec-stock').innerHTML='<div class="err">読み込みエラー。更新を押してください。</div>';
-  }
-}
-async function doIn(id){
-  const op=getOperator();if(!op)return;
-  const inp=document.getElementById('in-'+id);
-  const btn=document.getElementById('bin-'+id);
-  const qty=parseInt(inp.value)||0;
-  if(qty<=0){inp.style.borderColor='red';setTimeout(()=>inp.style.borderColor='',1000);return;}
-  const item=items.find(i=>String(i.id)===String(id));
-  if(!item)return;
-  btn.disabled=true;btn.textContent='保存中...';
-  await gasPost({action:'update_in',id,qty:Number(item.qty)+qty,diff:qty,item_name:item.name,operator:op});
-  inp.value=1;await loadItems();
-}
-async function doOut(id){
-  const op=getOperator();if(!op)return;
-  const inp=document.getElementById('out-'+id);
-  const btn=document.getElementById('bout-'+id);
-  const qty=parseInt(inp.value)||0;
-  if(qty<=0){inp.style.borderColor='red';setTimeout(()=>inp.style.borderColor='',1000);return;}
-  const item=items.find(i=>String(i.id)===String(id));
-  if(!item)return;
-  const newQty=Number(item.qty)-qty;
-  if(newQty<0){alert('在庫が足りません！現在：'+Math.round(Number(item.qty))+'本');return;}
-  btn.disabled=true;btn.textContent='保存中...';
-  await gasPost({action:'update_out',id,qty:newQty,diff:qty,item_name:item.name,operator:op});
-  inp.value=1;await loadItems();
-}
-function openEdit(id){
-  const item=items.find(i=>String(i.id)===String(id));
-  if(!item)return;
-  document.getElementById('e-id').value=id;
-  document.getElementById('e-name').value=item.name;
-  document.getElementById('e-unit').value=item.unit;
-  document.getElementById('e-qty').value=Math.round(Number(item.qty));
-  document.getElementById('e-min').value=Math.round(Number(item.min_qty));
-  document.getElementById('e-memo').value=item.memo||'';
-  document.getElementById('overlay').classList.add('open');
-}
-function bgClose(e){if(e.target===document.getElementById('overlay'))closeModal();}
-function closeModal(){document.getElementById('overlay').classList.remove('open');}
-async function saveEdit(){
-  const id=document.getElementById('e-id').value;
-  const name=document.getElementById('e-name').value.trim();
-  const unit=document.getElementById('e-unit').value.trim();
-  const qty=parseInt(document.getElementById('e-qty').value)||0;
-  const min_qty=parseInt(document.getElementById('e-min').value)||0;
-  const memo=document.getElementById('e-memo').value.trim();
-  if(!name)return;
-  await gasPost({action:'edit',id,name,unit,qty,min_qty,memo});
-  closeModal();await loadItems();
-}
-async function doDelete(){
-  const id=document.getElementById('e-id').value;
-  const item=items.find(i=>String(i.id)===String(id));
-  if(!confirm((item?item.name:'品目')+'を削除しますか？'))return;
-  await gasPost({action:'delete',id});
-  closeModal();await loadItems();
-}
-async function addItem(){
-  const name=document.getElementById('n-name').value.trim();
-  const unit=document.getElementById('n-unit').value.trim()||'本';
-  const qty=parseInt(document.getElementById('n-qty').value)||0;
-  const min_qty=parseInt(document.getElementById('n-min').value)||1;
-  const memo=document.getElementById('n-memo').value.trim();
-  if(!name)return;
-  const id='i'+Date.now();
-  await gasPost({action:'add',id,name,unit,qty,min_qty,memo});
-  document.getElementById('n-name').value='';
-  document.getElementById('n-unit').value='';
-  document.getElementById('n-qty').value='';
-  document.getElementById('n-min').value='';
-  document.getElementById('n-memo').value='';
-  sw('stock');await loadItems();
-}
-function sw(tab){
-  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['stock','summary','history','add'][i]===tab));
-  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));
-  document.getElementById('sec-'+tab).classList.add('active');
-}
-const saved=localStorage.getItem('bihin_operator');
-if(saved)document.getElementById('operator').value=saved;
-document.getElementById('operator').addEventListener('change',()=>{
-  localStorage.setItem('bihin_operator',document.getElementById('operator').value);
-});
-loadItems();
-</script>
-</body>
-</html>
+function doPrint(){
+  const d=new Date();
+  const ym=d.getFullYear()+'年'+(d.getMonth()+1)+'月';
+  const thisMonth=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+
+  const stockRows=items.map(item=>{
+    const[cls,lbl]=status(item);
